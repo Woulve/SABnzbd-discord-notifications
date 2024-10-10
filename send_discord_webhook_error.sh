@@ -1,17 +1,7 @@
 #!/bin/bash
 
-if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
-else
-    echo ".env file not found!"
-    exit 1
-fi
-
-# Check if WEBHOOK_URL is set
-if [ -z "$WEBHOOK_URL" ]; then
-    echo "WEBHOOK_URL is not set in the .env file!"
-    exit 1
-fi
+# Get the Discord webhook URL from the SAB_NOTIFICATION_PARAMETERS environment variable
+WEBHOOK_URL=$(echo "$SAB_NOTIFICATION_PARAMETERS" | awk '{print $1}')
 
 send_discord_notification() {
     local notification_type="$1"
@@ -34,6 +24,7 @@ send_discord_notification() {
         *) color=9807270 ;;            # Default to gray
     esac
 
+    # Set mention if it's an error or warning
     local mention=""
     if [[ "$notification_type" == "error" || "$notification_type" == "failed" || "$notification_type" == "warning" || "$notification_type" == "disk_full" ]]; then
         mention="@everyone"
@@ -66,8 +57,15 @@ send_discord_notification() {
          "$WEBHOOK_URL"
 }
 
+# Check if there are enough parameters
 if [ "$#" -lt 3 ]; then
     echo "Usage: $0 <notification_type> <notification_title> <notification_message>"
+    exit 1
+fi
+
+# Check if the webhook URL is available
+if [ -z "$WEBHOOK_URL" ]; then
+    echo "Webhook URL is not specified in SAB_NOTIFICATION_PARAMETERS."
     exit 1
 fi
 
